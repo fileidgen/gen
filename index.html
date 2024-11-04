@@ -63,7 +63,7 @@
     </form>
 
     <h3>מזהה קובץ:</h3>
-    <p id="fileIdOutput"></p>
+    <p id="fileIdOutput" style="direction: ltr;"></p>
     <button onclick="copyToClipboard()" id="copyButton" style="display: none;">העתק</button>
 
     <script>
@@ -238,11 +238,6 @@
                     subCat2labelSelect.style.display = "block"; // Hide label
                 }
 
-
-
-
-
-
             } else {
                 subCat1Select.innerHTML = "<option value='0'>0</option>";
                 subCat2Select.innerHTML = "<option value='0'>0</option>";
@@ -259,8 +254,14 @@
             const internalExternal = internalExternalRadioButton.value;
             const category = document.getElementById("category").value;
             const subCat1 = document.getElementById("subCat1").value.padStart(1, '0');
-            const subCat2 = document.getElementById("subCat2").value.padStart(1, '0');
             const dateInput = document.getElementById("date").value;
+
+            let subCat2;
+            if (category === "2") {
+                subCat2 = document.getElementById("subCat2Text").value.padStart(1, '0');
+            } else {
+                subCat2 = document.getElementById("subCat2").value.padStart(1, '0');
+            }
 
             if (!idNumber) {
                 alert("מספר ת.ז. אינו תקין.");
