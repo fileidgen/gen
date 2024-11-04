@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחולל מזהה קובץ</title>
+    <style>
+        body {
+            direction: rtl;
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: auto;
+        }
+        label, select, input, button {
+            display: block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h2>מחולל מזהה קובץ</h2>
+    <form id="fileIdForm">
+        <label for="idNumber">מספר ת.ז. (9 ספרות)</label>
+        <input type="text" id="idNumber" pattern="\d{9}" maxlength="9" required>
+
+        <label>פנימי/ חיצוני</label>
+        <div style="display: inline-block; text-align: right;">
+            <label style="display: inline-flex; align-items: center; margin-left: 10px;">
+                <input type="radio" name="internalExternal" value="1" required style="margin-left: 5px; margin-bottom: 0px;">
+                פנימי
+            </label>
+            <label style="display: inline-flex; align-items: center; margin-left: 10px;">
+                <input type="radio" name="internalExternal" value="2" style="margin-left: 5px; margin-bottom: 0px;">
+                חיצוני
+            </label>
+        </div>
+
+        <label for="category">קטגוריה</label>
+        <select id="category" onchange="updateSubCategories()" required>
+            <option value="1">אינטק</option>
+            <option value="2">פסיכותרפיה</option>
+            <option value="3">דיאגנוסטיקה</option>
+            <option value="4">עבודה מערכתית</option>
+            <option value="5">חירום</option>
+            <option value="6">ועדות</option>
+            <option value="7">תקשורת</option>
+            <option value="8">טפסים</option>
+        </select>
+
+        <label id="subCat1label" for="subCat1">תת קטגוריה 1</label>
+        <select id="subCat1" required></select>
+
+        <label id="subCat2label" for="subCat2">תת קטגוריה 2</label>
+        <select id="subCat2" required></select>
+        <label for="subCat2Text" id="subCat2TextLabel" style="display: none;">מספר פגישה\טיפול</label>
+        <input type="text" id="subCat2Text" style="display: none;" maxlength="2" pattern="\d{1,2}">
+
+
+        <label for="date">תאריך</label>
+        <input type="date" id="date" required>
+
+        <button type="button" onclick="generateFileId()">צור מזהה קובץ</button>
+    </form>
+
+    <h3>מזהה קובץ:</h3>
+    <p id="fileIdOutput"></p>
+    <button onclick="copyToClipboard()" id="copyButton" style="display: none;">העתק</button>
+
+    <script>
+        const subCategories = {
+            "1": {
+                subCat1_name: "סוג המסמך",
+                subCat1: [
+                    { text: "סיכום אינטק", value: "1" },
+                    { text: "שאלון הורים", value: "2" },
+                    { text: "שאלון מסגרת", value: "3" }
+                ],
+                subCat2: [{ text: "0", value: "0" }] // No subCat2 options, default to 0
+            },
+            "2": {
+                subCat1_name: "סוג המסמך",
+                subCat1: [
+                    { text: "סיכום פגישה", value: "1" },
+                    { text: "סיכום טיפול", value: "2" }
+                ],
+                subCat2: [{ text: "0", value: "0" }] // Should be entered as free text
+            },
+            "3": {
+                subCat1_name: "פרופסיה",
+                subCat1: [
+                    { text: "פסיכולוגיה", value: "1" },
+                    { text: "פסיכיאטריה", value: "2" },
+                    { text: "נוירולוגיה", value: "3" },
+                    { text: "התפתחות", value: "4" },
+                    { text: "רפואי אחר", value: "5" },
+                    { text: "קלינאית תקשורת", value: "6" },
+                    { text: "מרפאה בעיסוק", value: "7" },
+                    { text: "פיזיותרפיה", value: "8" },
+                    { text: "טיפול רגשי/ עובד סוציאלי", value: "9" }
+                ],
+                subCat2_name: "סוג התערבות",
+                subCat2: [
+                    { text: "הערכה", value: "1" },
+                    { text: "אבחון", value: "2" },
+                    { text: "סיכום התערבות לוועדות", value: "3" },
+                    { text: "הערכת בשלות", value: "4" },
+                    { text: "הערכת מסוכנות אובדנית", value: "5" },
+                    { text: "סיכום תצפית", value: "6" },
+                    { text: "הערכה פסיכו-דידקטית", value: "7" },
+                    { text: "הערכה פסיכו-דיאגנוסטית", value: "8" },
+                    { text: "חומר גלם", value: "9" }
+                ]
+            },
+            "4": {
+                subCat1_name: "סוג המסמך",
+                subCat1: [
+                    { text: "סיכום דיון", value: "1" },
+                    { text: "קונסולטציה", value: "2" },
+                    { text: "הטרו-אנמנזה", value: "3" }
+                ],
+                subCat2: [{ text: "0", value: "0" }] // No additional subCat2 options, default to 0
+            },
+            "5": {
+                subCat1_name: "סוג המסמך",
+                subCat1: [
+                    { text: "פנייה יזומה", value: "1" },
+                    { text: "פנייה של הורה", value: "2" },
+                    { text: "פנייה של מסגרת", value: "3" },
+                    { text: "פנייה של גורם אחר", value: "4" }
+                ],
+                subCat2: [{ text: "0", value: "0" }] // No additional subCat2 options, default to 0
+            },
+            "6": {
+                subCat1_name: "סוג הוועדה",
+                subCat1: [
+                    { text: "זכאות ואפיון", value: "1" },
+                    { text: "שילוב", value: "2" },
+                    { text: "חוסן", value: "3" },
+                    { text: "תכנון טיפול", value: "4" }
+                ],
+                subCat2_name: "סוג המסמך",
+                subCat2: [
+                    { text: "פרוטוקול", value: "1" },
+                    { text: "סיכום והחלטות", value: "2" },
+                    { text: "ישיבת טרום", value: "3" },
+                    { text: "בקשה לשיבוץ נכנס", value: "4" },
+                    { text: "בקשה לשיבוץ יוצא", value: "5" },
+                    { text: "תשובה לשיבוץ נכנס", value: "6" },
+                    { text: "תשובה לשיבוץ יוצא", value: "7" }
+                ]
+            },
+            "7": {
+                subCat1_name: "סוג הוועדה",
+                subCat1: [
+                    { text: "מכתב", value: "1" },
+                    { text: "דוא\"ל/פקס", value: "2" },
+                    { text: "טלפון", value: "3" },
+                    { text: "זום", value: "4" }
+                ],
+                subCat2_name: "כיווניות",
+                subCat2: [
+                    { text: "נכנס", value: "1" },
+                    { text: "יוצא", value: "2" }
+                ]
+            },
+            "8": {
+                subCat1_name: "סוג המסמך",
+                subCat1: [
+                    { text: "ויתור סודיות קבלת חומר", value: "1" },
+                    { text: "ויתור סודיות מסירת חומר", value: "2" },
+                    { text: "הסכמה להתערבות", value: "3" }
+                ],
+                subCat2: [{ text: "0", value: "0" }] // No additional subCat2 options, default to 0
+            }
+        };
+
+        function updateSubCategories() {
+            const category = document.getElementById("category").value;
+            const subCat1labelSelect = document.getElementById("subCat1label");
+            const subCat1Select = document.getElementById("subCat1");
+            const subCat2labelSelect = document.getElementById("subCat2label");
+            const subCat2Select = document.getElementById("subCat2");
+            const subCat2Text = document.getElementById("subCat2Text");
+            const subCat2TextLabel = document.getElementById("subCat2TextLabel");
+
+
+            subCat1Select.innerHTML = "";
+            subCat2Select.innerHTML = "";
+
+            if (category === "2") {
+                subCat2Select.style.display = "none";
+                subCat2labelSelect.style.display = "none";
+                subCat2Text.style.display = "block";
+                subCat2TextLabel.style.display = "block";
+            } else {
+                subCat2Text.style.display = "none";
+                subCat2TextLabel.style.display = "none";
+                subCat2Select.style.display = "block";
+                subCat2labelSelect.style.display = "block";
+            }
+            
+            console.warn(subCategories[category])
+            console.warn(subCategories[category].subCat1_name)
+            console.warn(subCategories[category].subCat1_name.value)
+            if (subCategories[category].subCat1_name) {
+                console.warn("replacing this:")
+                console.warn(subCat1labelSelect)
+                console.warn(subCat1labelSelect.textContent )
+                console.warn(" with this:")
+                console.warn(subCategories[category].subCat1_name)
+                subCat1labelSelect.textContent = subCategories[category].subCat1_name
+            }
+            if (subCategories[category].subCat2_name) {
+                subCat2labelSelect.textContent = subCategories[category].subCat2_name
+            }
+
+            if (subCategories[category]) {
+                subCategories[category].subCat1.forEach(subCat => {
+                    const option = document.createElement("option");
+                    option.text = subCat.text;
+                    option.value = subCat.value;
+                    subCat1Select.appendChild(option);
+                });
+
+                subCategories[category].subCat2.forEach(subCat => {
+                    const option = document.createElement("option");
+                    option.text = subCat.text;
+                    option.value = subCat.value;
+                    subCat2Select.appendChild(option);
+                });
+                
+                // Check if subCat2 only has one option with the value "0". If so, hide it.
+                if (subCategories[category].subCat2.length === 1 && subCategories[category].subCat2[0].value === "0") {
+                    subCat2Select.style.display = "none"; // Hide dropdown
+                    subCat2labelSelect.style.display = "none"; // Hide label
+                } else {
+                    subCat2Select.style.display = "block"; // Show dropdown
+                    subCat2labelSelect.style.display = "block"; // Hide label
+                }
+
+
+
+
+
+
+            } else {
+                subCat1Select.innerHTML = "<option value='0'>0</option>";
+                subCat2Select.innerHTML = "<option value='0'>0</option>";
+            }
+        }
+
+        function generateFileId() {
+            const internalExternalRadioButton = document.querySelector('input[name="internalExternal"]:checked');
+            if (!internalExternalRadioButton) {
+                alert("אנא בחרו בין פנימי וחיצוני.");
+            }
+
+            const idNumber = document.getElementById("idNumber").value;
+            const internalExternal = internalExternalRadioButton.value;
+            const category = document.getElementById("category").value;
+            const subCat1 = document.getElementById("subCat1").value.padStart(1, '0');
+            const subCat2 = document.getElementById("subCat2").value.padStart(1, '0');
+            const dateInput = document.getElementById("date").value;
+
+            if (!idNumber) {
+                alert("מספר ת.ז. אינו תקין.");
+                return;
+            }
+            if (!dateInput) {
+                alert("התאריך אינו תקין.");
+                return;
+            }
+            if (idNumber && internalExternal && category && subCat1 && subCat2 && dateInput) {
+                // Format the date as DDMMYYYY
+                const dateParts = dateInput.split('-'); // [YYYY, MM, DD]
+                const formattedDate = dateParts[2] + dateParts[1] + dateParts[0]; // DDMMYYYY
+
+                const fileId = `${idNumber}_${internalExternal}_${category}_${subCat1}_${subCat2}_${formattedDate}`;
+                document.getElementById("fileIdOutput").textContent = fileId;
+                document.getElementById("copyButton").style.display = "block";
+            } else {
+                alert("אנא מלאו את כל השדות כראוי.");
+            }
+        }
+
+        function copyToClipboard() {
+            const fileIdOutput = document.getElementById("fileIdOutput").textContent;
+            navigator.clipboard.writeText(fileIdOutput).then(() => {
+                alert("המזהה הועתק!");
+            }, () => {
+                alert("ההעתקה נכשלה.");
+            });
+        }
+        
+        window.onload = function() {
+            document.getElementById("category").value = "1"; // Set default to אינטק
+            updateSubCategories(); // Populate subcategories for אינטק on page load
+        };
+    </script>
+</body>
+</html>
