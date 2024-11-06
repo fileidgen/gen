@@ -65,8 +65,17 @@
     <h3>מזהה קובץ:</h3>
     <p id="fileIdOutput" style="direction: ltr;"></p>
     <button onclick="copyToClipboard()" id="copyButton" style="display: none;">העתק</button>
+<button type="button" onclick="clearForm()">נקה טופס</button>
 
     <script>
+        function clearForm() {
+    document.getElementById("fileIdForm").reset(); // Resets all form fields
+    document.getElementById("fileIdOutput").textContent = ""; // Clears the output
+    document.getElementById("copyButton").style.display = "none"; // Hides the copy button
+    updateSubCategories(); // Resets the subcategories based on the default category
+}
+
+        
         const subCategories = {
             "1": {
                 subCat1_name: "סוג המסמך",
